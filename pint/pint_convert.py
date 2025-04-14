@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-
+# type: ignore
 """
-    pint-convert
-    ~~~~~~~~~~~~
+pint-convert
+~~~~~~~~~~~~
 
-    :copyright: 2020 by Pint Authors, see AUTHORS for more details.
-    :license: BSD, see LICENSE for more details.
+:copyright: 2020 by Pint Authors, see AUTHORS for more details.
+:license: BSD, see LICENSE for more details.
 """
 
 from __future__ import annotations
@@ -13,77 +13,18 @@ from __future__ import annotations
 import argparse
 import contextlib
 import re
+from typing import Any
 
 from pint import UnitRegistry
-
-parser = argparse.ArgumentParser(description="Unit converter.", usage=argparse.SUPPRESS)
-parser.add_argument(
-    "-s",
-    "--system",
-    metavar="sys",
-    default="SI",
-    help="unit system to convert to (default: SI)",
-)
-parser.add_argument(
-    "-p",
-    "--prec",
-    metavar="n",
-    type=int,
-    default=12,
-    help="number of maximum significant figures (default: 12)",
-)
-parser.add_argument(
-    "-u",
-    "--prec-unc",
-    metavar="n",
-    type=int,
-    default=2,
-    help="number of maximum uncertainty digits (default: 2)",
-)
-parser.add_argument(
-    "-U",
-    "--with-unc",
-    dest="unc",
-    action="store_true",
-    help="consider uncertainties in constants",
-)
-parser.add_argument(
-    "-C",
-    "--no-corr",
-    dest="corr",
-    action="store_false",
-    help="ignore correlations between constants",
-)
-parser.add_argument(
-    "fr", metavar="from", type=str, help="unit or quantity to convert from"
-)
-parser.add_argument("to", type=str, nargs="?", help="unit to convert to")
-try:
-    args = parser.parse_args()
-except SystemExit:
-    parser.print_help()
-    raise
-
-ureg = UnitRegistry()
-ureg.auto_reduce_dimensions = True
-ureg.autoconvert_offset_to_baseunit = True
-ureg.enable_contexts("Gau", "ESU", "sp", "energy", "boltzmann")
-ureg.default_system = args.system
+from pint.compat import HAS_UNCERTAINTIES, ufloat
 
 
-def _set(key: str, value):
+def _set(ureg: UnitRegistry, key: str, value: Any):
     obj = ureg._units[key].converter
     object.__setattr__(obj, "scale", value)
 
 
-if args.unc:
-    try:
-        import uncertainties
-    except ImportError:
-        raise Exception(
-            "Failed to import uncertainties library!\n Please install uncertainties package"
-        )
-
+def _define_constants(ureg: UnitRegistry):
     # Measured constants subject to correlation
     #  R_i: Rydberg constant
     #  g_e: Electron g factor
@@ -109,6 +50,8 @@ if args.unc:
             [0.00233, 0.52445, 0.52959, 0.52714, 0.51521, 1.0],
         ]  # m_n
         try:
+            import uncertainties
+
             (R_i, g_e, m_u, m_e, m_p, m_n) = uncertainties.correlated_values_norm(
                 [R_i, g_e, m_u, m_e, m_p, m_n], corr
             )
@@ -117,73 +60,156 @@ if args.unc:
                 "Correlation cannot be calculated!\n  Please install numpy package"
             )
     else:
-        R_i = uncertainties.ufloat(*R_i)
-        g_e = uncertainties.ufloat(*g_e)
-        m_u = uncertainties.ufloat(*m_u)
-        m_e = uncertainties.ufloat(*m_e)
-        m_p = uncertainties.ufloat(*m_p)
-        m_n = uncertainties.ufloat(*m_n)
+        R_i = ufloat(*R_i)
+        g_e = ufloat(*g_e)
+        m_u = ufloat(*m_u)
+        m_e = ufloat(*m_e)
+        m_p = ufloat(*m_p)
+        m_n = ufloat(*m_n)
 
-    _set("R_inf", R_i)
-    _set("g_e", g_e)
-    _set("m_u", m_u)
-    _set("m_e", m_e)
-    _set("m_p", m_p)
-    _set("m_n", m_n)
+    _set(ureg, "R_inf", R_i)
+    _set(ureg, "g_e", g_e)
+    _set(ureg, "m_u", m_u)
+    _set(ureg, "m_e", m_e)
+    _set(ureg, "m_p", m_p)
+    _set(ureg, "m_n", m_n)
 
     # Measured constants with zero correlation
     _set(
+        ureg,
         "gravitational_constant",
-        uncertainties.ufloat(
-            ureg._units["gravitational_constant"].converter.scale, 0.00015e-11
-        ),
+        ufloat(ureg._units["gravitational_constant"].converter.scale, 0.00015e-11),
     )
 
     _set(
+        ureg,
         "d_220",
-        uncertainties.ufloat(ureg._units["d_220"].converter.scale, 0.000000032e-10),
+        ufloat(ureg._units["d_220"].converter.scale, 0.000000032e-10),
     )
 
     _set(
+        ureg,
         "K_alpha_Cu_d_220",
-        uncertainties.ufloat(
-            ureg._units["K_alpha_Cu_d_220"].converter.scale, 0.00000022
-        ),
+        ufloat(ureg._units["K_alpha_Cu_d_220"].converter.scale, 0.00000022),
     )
 
     _set(
+        ureg,
         "K_alpha_Mo_d_220",
-        uncertainties.ufloat(
-            ureg._units["K_alpha_Mo_d_220"].converter.scale, 0.00000019
-        ),
+        ufloat(ureg._units["K_alpha_Mo_d_220"].converter.scale, 0.00000019),
     )
 
     _set(
+        ureg,
         "K_alpha_W_d_220",
-        uncertainties.ufloat(
-            ureg._units["K_alpha_W_d_220"].converter.scale, 0.000000098
-        ),
+        ufloat(ureg._units["K_alpha_W_d_220"].converter.scale, 0.000000098),
     )
 
     ureg._root_units_cache = {}
     ureg._build_cache()
 
 
-def convert(u_from, u_to=None, unc=None, factor=None):
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Unit converter.", usage=argparse.SUPPRESS
+    )
+    parser.add_argument(
+        "-s",
+        "--system",
+        metavar="sys",
+        default="SI",
+        help="unit system to convert to (default: SI)",
+    )
+    parser.add_argument(
+        "-p",
+        "--prec",
+        metavar="n",
+        type=int,
+        default=12,
+        help="number of maximum significant figures (default: 12)",
+    )
+    parser.add_argument(
+        "-u",
+        "--prec-unc",
+        metavar="n",
+        type=int,
+        default=2,
+        help="number of maximum uncertainty digits (default: 2)",
+    )
+    parser.add_argument(
+        "-U",
+        "--with-unc",
+        dest="unc",
+        action="store_true",
+        help="consider uncertainties in constants",
+    )
+    parser.add_argument(
+        "-C",
+        "--no-corr",
+        dest="corr",
+        action="store_false",
+        help="ignore correlations between constants",
+    )
+    parser.add_argument(
+        "fr", metavar="from", type=str, help="unit or quantity to convert from"
+    )
+    parser.add_argument("to", type=str, nargs="?", help="unit to convert to")
+    try:
+        args = parser.parse_args()
+    except SystemExit:
+        parser.print_help()
+        raise
+
+    ureg = UnitRegistry()
+    ureg.auto_reduce_dimensions = True
+    ureg.autoconvert_offset_to_baseunit = True
+    ureg.enable_contexts("Gau", "ESU", "sp", "energy", "boltzmann")
+    ureg.default_system = args.system
+
+    u_from = args.fr
+    u_to = args.to
+    unc = None
+    factor = None
     prec_unc = 0
     q = ureg.Quantity(u_from)
     fmt = f".{args.prec}g"
+
     if unc:
         q = q.plus_minus(unc)
+
     if u_to:
         nq = q.to(u_to)
     else:
         nq = q.to_base_units()
+
     if factor:
         q *= ureg.Quantity(factor)
         nq *= ureg.Quantity(factor).to_base_units()
+
     if args.unc:
-        prec_unc = use_unc(nq.magnitude, fmt, args.prec_unc)
+        if not HAS_UNCERTAINTIES:
+            raise Exception(
+                "Failed to import uncertainties library!\n Please install uncertainties package"
+            )
+
+        _define_constants(ureg)
+
+        num = nq.magnitude
+        fmt = fmt
+        prec_unc = args.prec_unc
+
+        with contextlib.suppress(Exception):
+            if isinstance(num, type(ufloat(1, 0))):
+                full = ("{:" + fmt + "}").format(num)
+                unc = re.search(r"\+/-[0.]*([\d.]*)", full).group(1)
+                unc = len(unc.replace(".", ""))
+            else:
+                unc = 0
+
+        prec_unc = max(0, min(prec_unc, unc))
+    else:
+        prec_unc = 0
+
     if prec_unc > 0:
         fmt = f".{prec_unc}uS"
     else:
@@ -192,22 +218,3 @@ def convert(u_from, u_to=None, unc=None, factor=None):
 
     fmt = "{:" + fmt + "} {:~P}"
     print(("{:} = " + fmt).format(q, nq.magnitude, nq.units))
-
-
-def use_unc(num, fmt, prec_unc):
-    unc = 0
-    with contextlib.suppress(Exception):
-        if isinstance(num, uncertainties.UFloat):
-            full = ("{:" + fmt + "}").format(num)
-            unc = re.search(r"\+/-[0.]*([\d.]*)", full).group(1)
-            unc = len(unc.replace(".", ""))
-
-    return max(0, min(prec_unc, unc))
-
-
-def main():
-    convert(args.fr, args.to)
-
-
-if __name__ == "__main__":
-    main()

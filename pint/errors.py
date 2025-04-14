@@ -11,10 +11,9 @@
 from __future__ import annotations
 
 import typing as ty
-from dataclasses import dataclass, fields
 
-OFFSET_ERROR_DOCS_HTML = "https://pint.readthedocs.io/en/latest/nonmult.html"
-LOG_ERROR_DOCS_HTML = "https://pint.readthedocs.io/en/latest/nonmult.html"
+OFFSET_ERROR_DOCS_HTML = "https://pint.readthedocs.io/en/stable/user/nonmult.html"
+LOG_ERROR_DOCS_HTML = "https://pint.readthedocs.io/en/stable/user/log_units.html"
 
 MSG_INVALID_UNIT_NAME = "is not a valid unit name (must follow Python identifier rules)"
 MSG_INVALID_UNIT_SYMBOL = "is not a valid unit symbol (must not contain spaces)"
@@ -36,18 +35,21 @@ MSG_INVALID_SYSTEM_NAME = (
 )
 
 
-def is_dim(name):
+def is_dim(name: str) -> bool:
+    """Return True if the name is flanked by square brackets `[` and `]`."""
     return name[0] == "[" and name[-1] == "]"
 
 
-def is_valid_prefix_name(name):
+def is_valid_prefix_name(name: str) -> bool:
+    """Return True if the name is a valid python identifier or empty."""
     return str.isidentifier(name) or name == ""
 
 
 is_valid_unit_name = is_valid_system_name = is_valid_context_name = str.isidentifier
 
 
-def _no_space(name):
+def _no_space(name: str) -> bool:
+    """Return False if the name contains a space in any position."""
     return name.strip() == name and " " not in name
 
 
@@ -58,7 +60,14 @@ is_valid_unit_alias = (
 ) = is_valid_unit_symbol = is_valid_prefix_symbol = _no_space
 
 
-def is_valid_dimension_name(name):
+def is_valid_dimension_name(name: str) -> bool:
+    """Return True if the name is consistent with a dimension name.
+
+    - flanked by square brackets.
+    - empty dimension name or identifier.
+    """
+
+    # TODO: shall we check also fro spaces?
     return name == "[]" or (
         len(name) > 1 and is_dim(name) and str.isidentifier(name[1:-1])
     )
@@ -67,86 +76,91 @@ def is_valid_dimension_name(name):
 class WithDefErr:
     """Mixing class to make some classes more readable."""
 
-    def def_err(self, msg):
-        return DefinitionError(self.name, self.__class__.__name__, msg)
+    def def_err(self, msg: str):
+        return DefinitionError(self.name, self.__class__, msg)
 
 
-@dataclass(frozen=False)
 class PintError(Exception):
     """Base exception for all Pint errors."""
 
 
-@dataclass(frozen=False)
 class DefinitionError(ValueError, PintError):
     """Raised when a definition is not properly constructed."""
 
     name: str
-    definition_type: ty.Type
+    definition_type: type
     msg: str
+
+    def __init__(self, name: str, definition_type: type, msg: str):
+        self.name = name
+        self.definition_type = definition_type
+        self.msg = msg
 
     def __str__(self):
         msg = f"Cannot define '{self.name}' ({self.definition_type}): {self.msg}"
         return msg
 
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (self.name, self.definition_type, self.msg)
 
 
-@dataclass(frozen=False)
 class DefinitionSyntaxError(ValueError, PintError):
     """Raised when a textual definition has a syntax error."""
 
     msg: str
 
+    def __init__(self, msg: str):
+        self.msg = msg
+
     def __str__(self):
         return self.msg
 
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (self.msg,)
 
 
-@dataclass(frozen=False)
 class RedefinitionError(ValueError, PintError):
     """Raised when a unit or prefix is redefined."""
 
     name: str
-    definition_type: ty.Type
+    definition_type: type
+
+    def __init__(self, name: str, definition_type: type):
+        self.name = name
+        self.definition_type = definition_type
 
     def __str__(self):
         msg = f"Cannot redefine '{self.name}' ({self.definition_type})"
         return msg
 
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (self.name, self.definition_type)
 
 
-@dataclass(frozen=False)
 class UndefinedUnitError(AttributeError, PintError):
     """Raised when the units are not defined in the unit registry."""
 
-    unit_names: ty.Union[str, ty.Tuple[str, ...]]
+    unit_names: tuple[str, ...]
+
+    def __init__(self, unit_names: str | ty.Iterable[str]):
+        if isinstance(unit_names, str):
+            self.unit_names = (unit_names,)
+        else:
+            self.unit_names = tuple(unit_names)
 
     def __str__(self):
-        if isinstance(self.unit_names, str):
-            return f"'{self.unit_names}' is not defined in the unit registry"
-        if (
-            isinstance(self.unit_names, (tuple, list, set))
-            and len(self.unit_names) == 1
-        ):
+        if len(self.unit_names) == 1:
             return f"'{tuple(self.unit_names)[0]}' is not defined in the unit registry"
         return f"{tuple(self.unit_names)} are not defined in the unit registry"
 
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (self.unit_names,)
 
 
-@dataclass(frozen=False)
 class PintTypeError(TypeError, PintError):
-    def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+    pass
 
 
-@dataclass(frozen=False)
 class DimensionalityError(PintTypeError):
     """Raised when trying to convert between incompatible units."""
 
@@ -155,6 +169,20 @@ class DimensionalityError(PintTypeError):
     dim1: str = ""
     dim2: str = ""
     extra_msg: str = ""
+
+    def __init__(
+        self,
+        units1: ty.Any,
+        units2: ty.Any,
+        dim1: str = "",
+        dim2: str = "",
+        extra_msg: str = "",
+    ) -> None:
+        self.units1 = units1
+        self.units2 = units2
+        self.dim1 = dim1
+        self.dim2 = dim2
+        self.extra_msg = extra_msg
 
     def __str__(self):
         if self.dim1 or self.dim2:
@@ -170,15 +198,24 @@ class DimensionalityError(PintTypeError):
         )
 
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (
+            self.units1,
+            self.units2,
+            self.dim1,
+            self.dim2,
+            self.extra_msg,
+        )
 
 
-@dataclass(frozen=False)
 class OffsetUnitCalculusError(PintTypeError):
     """Raised on ambiguous operations with offset units."""
 
     units1: ty.Any
     units2: ty.Optional[ty.Any] = None
+
+    def __init__(self, units1: ty.Any, units2: ty.Optional[ty.Any] = None) -> None:
+        self.units1 = units1
+        self.units2 = units2
 
     def yield_units(self):
         yield self.units1
@@ -195,15 +232,18 @@ class OffsetUnitCalculusError(PintTypeError):
         )
 
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (self.units1, self.units2)
 
 
-@dataclass(frozen=False)
 class LogarithmicUnitCalculusError(PintTypeError):
     """Raised on inappropriate operations with logarithmic units."""
 
     units1: ty.Any
     units2: ty.Optional[ty.Any] = None
+
+    def __init__(self, units1: ty.Any, units2: ty.Optional[ty.Any] = None) -> None:
+        self.units1 = units1
+        self.units2 = units2
 
     def yield_units(self):
         yield self.units1
@@ -220,19 +260,28 @@ class LogarithmicUnitCalculusError(PintTypeError):
         )
 
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (self.units1, self.units2)
 
 
-@dataclass(frozen=False)
 class UnitStrippedWarning(UserWarning, PintError):
-
     msg: str
 
+    def __init__(self, msg: str):
+        self.msg = msg
+
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (self.msg,)
 
 
-@dataclass(frozen=False)
 class UnexpectedScaleInContainer(Exception):
+    pass
+
+
+class UndefinedBehavior(UserWarning, PintError):
+    msg: str
+
+    def __init__(self, msg: str):
+        self.msg = msg
+
     def __reduce__(self):
-        return self.__class__, tuple(getattr(self, f.name) for f in fields(self))
+        return self.__class__, (self.msg,)

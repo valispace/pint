@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import math
 import operator as op
@@ -23,7 +25,6 @@ def module_registry_auto_offset():
 # TODO: do not subclass from QuantityTestCase
 class TestLogarithmicQuantity(QuantityTestCase):
     def test_log_quantity_creation(self, caplog):
-
         # Following Quantity Creation Pattern
         for args in (
             (4.2, "dBm"),
@@ -85,7 +86,7 @@ class TestLogarithmicQuantity(QuantityTestCase):
         # ## Test dB to dB units octave - decade
         # 1 decade = log2(10) octave
         helpers.assert_quantity_almost_equal(
-            self.Q_(1.0, "decade"), self.Q_(math.log(10, 2), "octave")
+            self.Q_(1.0, "decade"), self.Q_(math.log2(10), "octave")
         )
         # ## Test dB to dB units dBm - dBu
         # 0 dBm = 1mW = 1e3 uW = 30 dBu
@@ -122,6 +123,8 @@ class TestLogarithmicQuantity(QuantityTestCase):
 
 
 log_unit_names = [
+    "decibelwatt",
+    "dBW",
     "decibelwatt",
     "dBW",
     "decibelmilliwatt",
@@ -214,6 +217,7 @@ def test_delta_quantity_by_multiplication(log_module_registry, unit_name, mag):
 @pytest.mark.parametrize(
     "unit1,unit2",
     [
+        ("decibelwatt", "dBW"),
         ("decibelwatt", "dBW"),
         ("decibelmilliwatt", "dBm"),
         ("decibelmicrowatt", "dBu"),

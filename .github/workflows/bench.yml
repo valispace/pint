@@ -3,7 +3,8 @@ name: codspeed-benchmarks
 on:
   push:
     branches:
-      - "main"
+      - "master"
+      - "develop"
   pull_request:
   # `workflow_dispatch` allows CodSpeed to trigger backtest
   # performance analysis in order to generate initial data.
@@ -11,7 +12,7 @@ on:
 
 jobs:
   benchmarks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
@@ -22,10 +23,10 @@ jobs:
         run: pip install "numpy>=1.23,<2.0.0"
 
       - name: Install bench dependencies
-        run: pip install .[bench]
+        run: pip install .[codspeed]
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v1
+        uses: CodSpeedHQ/action@v2
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: pytest . --codspeed
