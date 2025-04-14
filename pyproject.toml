@@ -1,14 +1,14 @@
 [project]
 name = "Pint"
-authors = [
-  {name="Hernan E. Grecco", email="hernan.grecco@gmail.com"}
-]
-license = {text = "BSD"}
+authors = [{ name = "Hernan E. Grecco", email = "hernan.grecco@gmail.com" }, { name = "Valispace", email = "support@valispace.com"}]
+dynamic = ["version"]
+license = { text = "BSD" }
 description = "Physical quantities module"
 readme = "README.rst"
 maintainers = [
-  {name="Hernan E. Grecco", email="hernan.grecco@gmail.com"},
-  {name="Jules Chéron", email="julescheron@gmail.com"}
+  { name = "Hernan E. Grecco", email = "hernan.grecco@gmail.com" },
+  { name = "Jules Chéron", email = "julescheron@gmail.com" },
+  { name = "Valispace", email = "support@valispace.com"},
 ]
 keywords = ["physical", "quantities", "unit", "conversion", "science"]
 classifiers = [
@@ -66,7 +66,7 @@ dask = ["dask"]
 mip = ["mip >= 1.13"]
 
 [project.urls]
-Homepage = "https://github.com/hgrecco/pint"
+Homepage = "https://github.com/valispace/pint"
 Documentation = "https://pint.readthedocs.io/"
 
 [project.scripts]
