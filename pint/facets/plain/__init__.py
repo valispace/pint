@@ -19,9 +19,11 @@ from .definitions import (
     UnitDefinition,
 )
 from .objects import PlainQuantity, PlainUnit
-from .registry import PlainRegistry
+from .quantity import MagnitudeT
+from .registry import GenericPlainRegistry, PlainRegistry, QuantityT, UnitT
 
 __all__ = [
+    "GenericPlainRegistry",
     "PlainUnit",
     "PlainQuantity",
     "PlainRegistry",
@@ -31,4 +33,7 @@ __all__ = [
     "PrefixDefinition",
     "ScaleConverter",
     "UnitDefinition",
+    "QuantityT",
+    "UnitT",
+    "MagnitudeT",
 ]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pickle
 
 import pytest
@@ -116,7 +118,7 @@ class TestErrors:
         q2 = ureg.Quantity("1 bar")
 
         for protocol in range(pickle.HIGHEST_PROTOCOL + 1):
-            for ex in [
+            for ex in (
                 DefinitionSyntaxError("foo"),
                 RedefinitionError("foo", "bar"),
                 UndefinedUnitError("meter"),
@@ -125,7 +127,7 @@ class TestErrors:
                     Quantity("1 kg")._units, Quantity("1 s")._units
                 ),
                 OffsetUnitCalculusError(q1._units, q2._units),
-            ]:
+            ):
                 with subtests.test(protocol=protocol, etype=type(ex)):
                     pik = pickle.dumps(ureg.Quantity("1 foo"), protocol)
                     with pytest.raises(UndefinedUnitError):
@@ -142,3 +144,13 @@ class TestErrors:
 
                     with pytest.raises(PintError):
                         raise ex
+
+    def test_dimensionality_error_message(self):
+        ureg = UnitRegistry(system="SI")
+        with pytest.raises(ValueError) as error:
+            ureg.get_dimensionality("[bilbo]")
+
+        assert (
+            str(error.value)
+            == "[bilbo] is not defined as dimension in the pint UnitRegistry"
+        )

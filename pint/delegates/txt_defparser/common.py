@@ -12,13 +12,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
+import flexparser as fp
 
 from ... import errors
-from ..._vendor import flexparser as fp
+from ..base_defparser import ParserConfig
 
 
-@dataclass(frozen=True)
 class DefinitionSyntaxError(errors.DefinitionSyntaxError, fp.ParsingError):
     """A syntax error was found in a definition. Combines:
 
@@ -28,9 +29,13 @@ class DefinitionSyntaxError(errors.DefinitionSyntaxError, fp.ParsingError):
     and an extra location attribute in which the filename or reseource is stored.
     """
 
-    location: str = field(init=False, default="")
+    msg: str
 
-    def __str__(self):
+    def __init__(self, msg: str, location: str = ""):
+        self.msg = msg
+        self.location = location
+
+    def __str__(self) -> str:
         msg = (
             self.msg + "\n    " + (self.format_position or "") + " " + (self.raw or "")
         )
@@ -38,21 +43,20 @@ class DefinitionSyntaxError(errors.DefinitionSyntaxError, fp.ParsingError):
             msg += "\n    " + self.location
         return msg
 
-    def set_location(self, value):
+    def set_location(self, value: str) -> None:
         super().__setattr__("location", value)
 
 
 @dataclass(frozen=True)
-class ImportDefinition(fp.IncludeStatement):
-
+class ImportDefinition(fp.IncludeStatement[ParserConfig]):
     value: str
 
     @property
-    def target(self):
+    def target(self) -> str:
         return self.value
 
     @classmethod
-    def from_string(cls, s: str) -> fp.FromString[ImportDefinition]:
+    def from_string(cls, s: str) -> fp.NullableParsedResult[ImportDefinition]:
         if s.startswith("@import"):
             return ImportDefinition(s[len("@import") :].strip())
         return None

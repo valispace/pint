@@ -20,13 +20,15 @@ import re
 import typing as ty
 from dataclasses import dataclass
 
-from ..._vendor import flexparser as fp
+import flexparser as fp
+
 from ...facets.group import definitions
+from ..base_defparser import PintParsedStatement
 from . import block, common, plain
 
 
 @dataclass(frozen=True)
-class BeginGroup(fp.ParsedStatement):
+class BeginGroup(PintParsedStatement):
     """Being of a group directive.
 
     @group <name> [using <group 1>, ..., <group N>]
@@ -39,7 +41,7 @@ class BeginGroup(fp.ParsedStatement):
     using_group_names: ty.Tuple[str, ...]
 
     @classmethod
-    def from_string(cls, s: str) -> fp.FromString[BeginGroup]:
+    def from_string(cls, s: str) -> fp.NullableParsedResult[BeginGroup]:
         if not s.startswith("@group"):
             return None
 
@@ -59,7 +61,16 @@ class BeginGroup(fp.ParsedStatement):
 
 
 @dataclass(frozen=True)
-class GroupDefinition(block.DirectiveBlock):
+class GroupDefinition(
+    block.DirectiveBlock[
+        definitions.GroupDefinition,
+        BeginGroup,
+        ty.Union[
+            plain.CommentDefinition,
+            plain.UnitDefinition,
+        ],
+    ]
+):
     """Definition of a group.
 
         @group <name> [using <group 1>, ..., <group N>]
@@ -80,27 +91,21 @@ class GroupDefinition(block.DirectiveBlock):
 
     """
 
-    opening: fp.Single[BeginGroup]
-    body: fp.Multi[
-        ty.Union[
-            plain.CommentDefinition,
-            plain.UnitDefinition,
-        ]
-    ]
-
-    def derive_definition(self):
+    def derive_definition(self) -> definitions.GroupDefinition:
         return definitions.GroupDefinition(
             self.name, self.using_group_names, self.definitions
         )
 
     @property
-    def name(self):
+    def name(self) -> str:
+        assert isinstance(self.opening, BeginGroup)
         return self.opening.name
 
     @property
-    def using_group_names(self):
+    def using_group_names(self) -> tuple[str, ...]:
+        assert isinstance(self.opening, BeginGroup)
         return self.opening.using_group_names
 
     @property
-    def definitions(self) -> ty.Tuple[plain.UnitDefinition, ...]:
+    def definitions(self) -> tuple[plain.UnitDefinition, ...]:
         return tuple(el for el in self.body if isinstance(el, plain.UnitDefinition))
