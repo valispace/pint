@@ -10,6 +10,7 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
+from __future__ import annotations
 
 import datetime
 from importlib.metadata import version
@@ -43,6 +44,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_design",
 ]
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

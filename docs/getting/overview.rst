@@ -14,7 +14,7 @@ Due to its modular design, you can extend (or even rewrite!) the complete list
 without changing the source code. It supports a lot of numpy mathematical
 operations **without monkey patching or wrapping numpy**.
 
-It has a complete test coverage. It runs in Python 3.8+ with no other
+It has a complete test coverage. It runs in Python 3.9+ with no other
 dependencies. It is licensed under a `BSD 3-clause style license`_.
 
 It is extremely easy and natural to use:
@@ -105,6 +105,7 @@ License
 -------
 
 .. literalinclude:: ../../LICENSE
+   :language: none
 
 .. _`comprehensive list of physical units, prefixes and constants`: https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
 .. _`uncertainties package`: https://pythonhosted.org/uncertainties/

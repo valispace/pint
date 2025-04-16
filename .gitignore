@@ -1,19 +1,27 @@
+# ignore all hidden files
+.*
+# except
+!.gitignore
+!.gitattributes
+!.github/
+!.pre-commit-config.yaml
+!.copier-answers.yml
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+
 *~
 __pycache__
 *egg-info*
-*.pyc
-.DS_Store
 docs/_build/
-.idea
-.vscode
 build/
 dist/
 MANIFEST
-*pytest_cache*
-.eggs
-.mypy_cache
 pip-wheel-metadata
 pint/testsuite/dask-worker-space
+venv
 
 # WebDAV file system cache files
 .DAV/
@@ -22,7 +30,6 @@ pint/testsuite/dask-worker-space
 tags
 
 test/
-.coverage*
 
 # notebook stuff
 *.ipynb_checkpoints*
@@ -34,7 +41,6 @@ notebooks/pandas_test.csv
 dask-worker-space
 
 # airspeed velocity bechmark
-.asv/
 benchmarks/hashes.txt
 
 # local python environment
